@@ -25,3 +25,6 @@ dist-ssr
 
 out/*
 .idea
+.terraform
+.terraform.lock*
+*tfstate*
