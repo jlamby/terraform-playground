@@ -20,6 +20,6 @@ jobs:
             --health-retries 10
             --health-timeout 5s
     steps:
-      - name: prepare
+      - name: Checkout
       - uses: actions/checkout@v6.0.1
     
