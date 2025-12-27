@@ -1,0 +1,25 @@
+name: terraform-playground
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        ports: 
+          - 4566:4566
+      options: >-
+            --health-cmd "curl -f http://localhost:4566/health || exit 1"
+            --health-interval 5s
+            --health-retries 10
+            --health-timeout 5s
+    steps:
+      - name: prepare
+      - uses: actions/checkout@v6.0.1
+    
