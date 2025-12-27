@@ -7,19 +7,89 @@ on:
     branches: [main]
 
 jobs:
-  terraform:
+  back:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - uses: actions/checkout@v6
+        name: 'prepare'
+
+      - name: 'build'
+        run: |
+          cd back
+          npm install
+          npm run build
+          cd ..
+
+      - name: 'packaging'
+        run: |
+          cd back/dist
+          zip -r lambda.zip .
+
+      - uses: actions/upload-artifact@v6
+        name: 'uploading'
+        with:
+          name: back-lambda
+          path: back/dist/lambda.zip
+
+  infra:
+    runs-on: ubuntu-latest
+    needs: [ back ]
     services:
       localstack:
         image: localstack/localstack:latest
-        ports: 
+        ports:
           - 4566:4566
-      options: >-
-            --health-cmd "curl -f http://localhost:4566/health || exit 1"
-            --health-interval 5s
-            --health-retries 10
-            --health-timeout 5s
+        env:
+          SERVICES: lambda,iam,dynamodb,cloudwatch,logs
+          DEFAULT_REGION: us-east-1
     steps:
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.3"
+
+      - name: 'Wait for LocalStack'
+        run: |
+          until curl -s http://localhost:4566/health | grep 'running'; do 
+          sleep 2 
+          done
+
       - uses: actions/checkout@v6
-        name: Checkout
-    
+        name: 'prepare'
+
+      - uses: actions/download-artifact@v6
+        with:
+            name: back-lambda
+            path: infra/
+
+      - name: 'terraform init'
+        run: |
+          cd infra
+          terraform init
+
+      - name: 'terraform plan'
+        run: |
+          cd infra
+          terraform plan
+
+      - name: 'terraform apply'
+        run: |
+          cd infra
+          terraform apply -auto-approve
+
+#  localstack:
+#    runs-on: ubuntu-latest
+#    services:
+#      localstack:
+#        image: localstack/localstack:latest
+#        ports:
+#          - 4566:4566
+#      options: >-
+#            --health-cmd "curl -f http://localhost:4566/health || exit 1"
+#            --health-interval 5s
+#            --health-retries 10
+#            --health-timeout 5s
+#
